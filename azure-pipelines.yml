@@ -24,17 +24,15 @@ steps:
       sudo apt-add-repository "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main"
       sudo apt-get update && sudo apt-get install terraform -y
 
-      # 2) Move to your Terraform folder
-      cd infra
 
-      # 3) Run Terraform commands
+      # 2) Run Terraform commands
       terraform init
-      terraform plan -out=tfplan -var="db_admin_password=$(DB_ADMIN_PASSWORD)" -var="pname=$(pname)" -var="org_url=$(url)" -var="pat=$(pat) -var="azure_subscription_id=$(sub_id)"
+      terraform plan -out=tfplan -var="db_admin_password=$(DB_ADMIN_PASSWORD)" -var="pname=$(pname)" -var="org_url=$(url)" -var="pat=$(pat)" -var="azure_subscription_id=$(sub_id)"
       # "db_admin_password" is presumably stored as a pipeline secret variable 
       # in Azure DevOps for your Terraform to create the DB.
       terraform apply -auto-approve tfplan
 
-      # 4) Export outputs to a JSON file for downstream steps
+      # 3) Export outputs to a JSON file for downstream steps
       terraform output -json > ../tf-outputs.json
   env:
     # This references a secret variable in your Azure DevOps pipeline 
@@ -46,7 +44,7 @@ steps:
     sub_id: $(sub_id)
 
 - script: |
-    # 5) Parse tf-outputs.json using jq & set pipeline variables
+    # 4) Parse tf-outputs.json using jq & set pipeline variables
     sudo apt-get update && sudo apt-get install -y jq
 
     export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
