@@ -93,7 +93,12 @@ resource "azurerm_service_plan" "asp" {
   name                = "${var.app_name}-plan"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  sku_name            = "B1"  # Basic B1
+
+  # Required in the newer azurerm provider
+  os_type   = "Linux"  # or "Windows"
+
+  # e.g. Basic B1, Premium P1v2, etc.
+  sku_name = "B1"
 }
 
 #################################
