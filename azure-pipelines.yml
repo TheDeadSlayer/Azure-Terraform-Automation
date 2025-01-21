@@ -1,8 +1,5 @@
 # azure-pipelines-infra.yml
-# A pipeline to (a) run Terraform, (b) capture Terraform outputs, 
-# and (c) set them as pipeline variables for subsequent usage.
-
-trigger: none  # We'll run this manually or via another mechanism
+trigger: none
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -11,32 +8,30 @@ steps:
 - task: AzureCLI@2
   displayName: 'Install Terraform & Run "terraform init/plan/apply"'
   inputs:
-    # 1) "azureSubscription" references your Azure DevOps Service Connection 
-    #    that authenticates to Azure. See explanation below.
-    azureSubscription: 'MyAzureServiceConnection'  # <--- YOUR SERVICE CONNECTION NAME HERE
+    azureSubscription: 'MyAzureServiceConnection'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
-      # (Optional) Install or update Terraform
+      # Install or update Terraform
       curl -sSL https://aka.ms/InstallAzureCLIDeb | sudo bash
       sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
       curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
       sudo apt-add-repository "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main"
       sudo apt-get update && sudo apt-get install terraform -y
 
-
-      # 2) Run Terraform commands
+      # Run Terraform commands
       terraform init
-      terraform plan -out=tfplan -var="db_admin_password=$(DB_ADMIN_PASSWORD)" -var="pname=$(pname)" -var="org_url=$(url)" -var="pat=$(pat)" -var="azure_subscription_id=$(sub_id)"
-      # "db_admin_password" is presumably stored as a pipeline secret variable 
-      # in Azure DevOps for your Terraform to create the DB.
+      terraform plan -out=tfplan \
+        -var="db_admin_password=$(DB_ADMIN_PASSWORD)" \
+        -var="pname=$(pname)" \
+        -var="org_url=$(url)" \
+        -var="pat=$(pat)" \
+        -var="azure_subscription_id=$(sub_id)"
       terraform apply -auto-approve tfplan
 
-      # 3) Export outputs to a JSON file for downstream steps
+      # Export Terraform outputs to a JSON file
       terraform output -json > ../tf-outputs.json
   env:
-    # This references a secret variable in your Azure DevOps pipeline 
-    # or variable group named DB_ADMIN_PASSWORD.
     DB_ADMIN_PASSWORD: $(DB_ADMIN_PASSWORD)
     url: $(url) 
     pat: $(pat)
@@ -44,9 +39,10 @@ steps:
     sub_id: $(sub_id)
 
 - script: |
-    # 4) Parse tf-outputs.json using jq & set pipeline variables
+    # Install jq for parsing JSON outputs
     sudo apt-get update && sudo apt-get install -y jq
 
+    # Parse Terraform outputs and set them as pipeline variables
     export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
     echo "##vso[task.setvariable variable=DB_HOST]$DB_HOST"
 
@@ -58,4 +54,37 @@ steps:
 
     export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
     echo "##vso[task.setvariable variable=DB_NAME]$DB_NAME"
+
+    # Capture backend API URL and frontend app name
+    export BACKEND_API_URL=$(jq -r '.backend_app_url.value' tf-outputs.json)
+    echo "##vso[task.setvariable variable=BACKEND_API_URL]$BACKEND_API_URL"
+
+    export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
+    echo "##vso[task.setvariable variable=FRONTEND_APP_NAME]$FRONTEND_APP_NAME"
+
+    # Export backend app name
+    export BACKEND_APP_NAME=$(jq -r '.backend_app_name.value' tf-outputs.json)
+    echo "##vso[task.setvariable variable=BACKEND_APP_NAME]$BACKEND_APP_NAME"
   displayName: 'Extract Terraform Outputs & Set Pipeline Variables'
+
+- task: AzureWebApp@1
+  displayName: 'Configure Backend App Environment Variables'
+  inputs:
+    azureSubscription: 'MyAzureServiceConnection'
+    appName: $(BACKEND_APP_NAME)
+    appType: webApp  # Specifies the type of app
+    appSettings: |
+      DB_HOST=$(DB_HOST)
+      DB_PORT=5432
+      DB_USER=$(DB_USER)
+      DB_PASSWORD=$(DB_PASSWORD)
+      DB_NAME=$(DB_NAME)
+
+- task: AzureWebApp@1
+  displayName: 'Configure Frontend App Environment Variables'
+  inputs:
+    azureSubscription: 'MyAzureServiceConnection'
+    appName: $(FRONTEND_APP_NAME)
+    appType: webApp  # Specifies the type of app
+    appSettings: |
+      REACT_APP_API_URL=$(BACKEND_API_URL)
