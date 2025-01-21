@@ -41,3 +41,19 @@ variable "image_name" {
   type    = string
   default = "my-backend-image"
 }
+
+variable "org_url" {
+  type    = string
+  default = "MyExistingProject"
+}
+
+variable "pat" {
+  type    = string
+  default = "MyExistingProject"
+}
+
+
+variable "pname" {
+  type    = string
+  default = "MyExistingProject"
+}

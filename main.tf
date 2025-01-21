@@ -15,6 +15,11 @@ provider "azurerm" {
   features {}
 }
 
+provider "azuredevops" {
+  org_service_url       = var.org_url
+  personal_access_token = var.pat
+}
+
 #################################
 # 1) Resource Group
 #################################
@@ -91,7 +96,7 @@ resource "azurerm_container_registry" "acr" {
 }
 # Azure DevOps project
 data "azuredevops_project" "existing" {
-  name = var.azdo_project_name
+  name = var.pname
 }
 
 # Docker registry service endpoint
