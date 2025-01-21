@@ -186,7 +186,7 @@ resource "azurerm_service_plan" "asp_frontend" {
 #}
 
 resource "azurerm_app_service" "frontend_app" {
-  name                = "${var.frontend_app_name}"
+  name                = "${var.fe_app_name}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   app_service_plan_id = azurerm_service_plan.asp_frontend.id
