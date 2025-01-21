@@ -5,20 +5,20 @@ pool:
 
 steps:
 - task: AzureCLI@2
-  displayName: 'Install Terraform & Run "terraform init/plan/apply"'
+  displayName: 'Run Terraform to Generate tf-outputs.json'
   inputs:
     azureSubscription: 'MyAzureServiceConnection'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
-      # Install or update Terraform
+      # Install Terraform (if not already installed)
       curl -sSL https://aka.ms/InstallAzureCLIDeb | sudo bash
       sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
       curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
       sudo apt-add-repository "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main"
       sudo apt-get update && sudo apt-get install terraform -y
 
-      # Run Terraform commands
+      # Initialize and apply Terraform
       terraform init
       terraform plan -out=tfplan \
         -var="db_admin_password=$(DB_ADMIN_PASSWORD)" \
@@ -28,13 +28,21 @@ steps:
         -var="azure_subscription_id=$(sub_id)"
       terraform apply -auto-approve tfplan
 
-      # Export Terraform outputs to a JSON file
-      terraform output -json > ../tf-outputs.json
+      # Generate tf-outputs.json
+      terraform output -json > tf-outputs.json
+
+      # Confirm the file exists
+      if [ ! -f tf-outputs.json ]; then
+        echo "Error: tf-outputs.json was not created."
+        exit 1
+      else
+        echo "tf-outputs.json created successfully."
+      fi
   env:
     DB_ADMIN_PASSWORD: $(DB_ADMIN_PASSWORD)
-    url: $(url) 
+    url: $(url)
     pat: $(pat)
-    pname: $(pname) 
+    pname: $(pname)
     sub_id: $(sub_id)
 
 - script: |
