@@ -1,4 +1,3 @@
-# azure-pipelines-infra.yml
 trigger: none
 
 pool:
@@ -42,49 +41,24 @@ steps:
     # Install jq for parsing JSON outputs
     sudo apt-get update && sudo apt-get install -y jq
 
-    # Parse Terraform outputs and set them as pipeline variables
+    # Parse Terraform outputs
     export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_HOST]$DB_HOST"
-
     export DB_USER=$(jq -r '.db_user.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_USER]$DB_USER"
-
     export DB_PASSWORD=$(jq -r '.db_password.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_PASSWORD]$DB_PASSWORD"
-
     export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_NAME]$DB_NAME"
-
-    # Capture backend API URL and frontend app name
     export BACKEND_API_URL=$(jq -r '.backend_app_url.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=BACKEND_API_URL]$BACKEND_API_URL"
-
-    export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=FRONTEND_APP_NAME]$FRONTEND_APP_NAME"
-
-    # Export backend app name
     export BACKEND_APP_NAME=$(jq -r '.backend_app_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=BACKEND_APP_NAME]$BACKEND_APP_NAME"
-  displayName: 'Extract Terraform Outputs & Set Pipeline Variables'
+    export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
 
-- task: AzureWebApp@1
-  displayName: 'Configure Backend App Environment Variables'
-  inputs:
-    azureSubscription: 'MyAzureServiceConnection'
-    appName: $(BACKEND_APP_NAME)
-    appType: webApp  # Specifies the type of app
-    appSettings: |
-      DB_HOST=$(DB_HOST)
-      DB_PORT=5432
-      DB_USER=$(DB_USER)
-      DB_PASSWORD=$(DB_PASSWORD)
-      DB_NAME=$(DB_NAME)
+    # Configure backend environment variables
+    az webapp config appsettings set --name $BACKEND_APP_NAME --resource-group $(pname) --settings \
+      DB_HOST=$DB_HOST \
+      DB_PORT=5432 \
+      DB_USER=$DB_USER \
+      DB_PASSWORD=$DB_PASSWORD \
+      DB_NAME=$DB_NAME
 
-- task: AzureWebApp@1
-  displayName: 'Configure Frontend App Environment Variables'
-  inputs:
-    azureSubscription: 'MyAzureServiceConnection'
-    appName: $(FRONTEND_APP_NAME)
-    appType: webApp  # Specifies the type of app
-    appSettings: |
-      REACT_APP_API_URL=$(BACKEND_API_URL)
+    # Configure frontend environment variables
+    az webapp config appsettings set --name $FRONTEND_APP_NAME --resource-group $(pname) --settings \
+      REACT_APP_API_URL=$BACKEND_API_URL
+  displayName: 'Set Environment Variables for Web Apps'
