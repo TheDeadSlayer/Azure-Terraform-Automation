@@ -193,10 +193,6 @@ resource "azurerm_app_service" "frontend_app" {
 
   # If you plan to serve a Node-based React app (SSR) or otherwise.
   # If purely static, you can simply deploy build/ files as static content.
-  site_config {
-    # For a Node-based environment, for example:
-    linux_fx_version = "NODE|18-lts"
-  }
 
   site_config {
     linux_fx_version = "NODE|18-lts"
