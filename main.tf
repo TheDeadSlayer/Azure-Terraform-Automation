@@ -195,11 +195,11 @@ resource "azurerm_app_service" "frontend_app" {
   # If purely static, you can simply deploy build/ files as static content.
   site_config {
     # For a Node-based environment, for example:
-    linux_fx_version = "NODE|18-lts"
-  }
+    #linux_fx_version = "NODE|18-lts"
+  #}
 
   # Example environment variables for the frontend
-  app_settings = {
-    REACT_APP_API_URL = "https://${azurerm_app_service.app.default_site_hostname}/api"
-  }
+  #app_settings = {
+    #REACT_APP_API_URL = "https://${azurerm_app_service.app.default_site_hostname}/api"
+  #}
 }
