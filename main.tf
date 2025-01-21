@@ -117,7 +117,7 @@ resource "azurerm_app_service" "app" {
   name                = "${var.app_name}-${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  service_plan_id     = azurerm_service_plan.asp.id
+  app_service_plan_id     = azurerm_service_plan.asp.id
 
   site_config {
     linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/${var.image_name}:latest"
