@@ -64,17 +64,9 @@ resource "null_resource" "init_employees_table" {
   ]
 
   provisioner "local-exec" {
-    environment = {
-      PGPASSWORD = var.db_admin_password
-    }
-
     command = <<EOT
       psql \
-        --host=${azurerm_postgresql_flexible_server.db.fqdn} \
-        --port=5432 \
-        --username=${var.db_admin_username}@${var.db_server_name} \
-        --dbname=${var.db_name} \
-        --set=sslmode=require \
+        "postgresql://${var.db_admin_username}:${var.db_admin_password}@${azurerm_postgresql_flexible_server.db.fqdn}:5432/${var.db_name}?sslmode=require" \
         -c "CREATE TABLE IF NOT EXISTS employees (
              id SERIAL PRIMARY KEY,
              name TEXT NOT NULL,
