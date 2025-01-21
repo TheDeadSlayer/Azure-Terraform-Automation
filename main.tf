@@ -36,6 +36,13 @@ resource "azurerm_postgresql_flexible_server" "db" {
   public_network_access_enabled = true
 }
 
+resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_all" {
+  name     = "allow_all_ips"
+  server_id = azurerm_postgresql_flexible_server.db.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "255.255.255.255"
+}
+
 # The actual "employeesdb" (or whatever db_name) on that server
 resource "azurerm_postgresql_flexible_server_database" "employees" {
   name      = var.db_name
@@ -50,13 +57,13 @@ resource "azurerm_postgresql_flexible_server_database" "employees" {
 #################################
 # (New) Initialize a table with (id, name, role)
 #################################
-# This uses local-exec + psql to run "CREATE TABLE ..." 
-# Make sure psql is installed on the machine running Terraform.
 resource "null_resource" "init_employees_table" {
-  depends_on = [azurerm_postgresql_flexible_server_database.employees]
+  depends_on = [
+    azurerm_postgresql_flexible_server_database.employees,
+    azurerm_postgresql_flexible_server_firewall_rule.allow_all
+  ]
 
   provisioner "local-exec" {
-    # Pass password via env var so psql won't prompt
     environment = {
       PGPASSWORD = var.db_admin_password
     }
