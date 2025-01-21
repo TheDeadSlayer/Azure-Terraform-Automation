@@ -1,26 +1,34 @@
-# Host name or FQDN for your Azure PostgreSQL server
 output "db_host" {
-  value = azurerm_postgresql_flexible_server.db.fqdn
+  description = "Database host"
+  value       = azurerm_postgresql_flexible_server.db.fqdn
 }
 
-# Full username, e.g., "postgres@servername"
 output "db_user" {
-  value = "${azurerm_postgresql_flexible_server.db.administrator_login}@${azurerm_postgresql_flexible_server.db.name}"
-  sensitive = true
+  description = "Database user"
+  value       = "${var.db_admin_username}@${azurerm_postgresql_flexible_server.db.name}"
 }
 
-# Password for the PostgreSQL admin user
 output "db_password" {
-  value     = var.db_admin_password
-  sensitive = true
+  description = "Database password"
+  value       = var.db_admin_password
 }
 
-# Name of the DB if needed
 output "db_name" {
-  value = var.db_name
+  description = "Database name"
+  value       = azurerm_postgresql_flexible_server_database.employees.name
 }
 
 output "backend_app_url" {
-  description = "The URL of the backend app"
+  description = "The API URL for the backend"
   value       = "https://${azurerm_app_service.app.default_site_hostname}/api"
+}
+
+output "frontend_app_name" {
+  description = "Frontend app name"
+  value       = azurerm_app_service.frontend_app.name
+}
+
+output "backend_app_name" {
+  description = "Backend app name"
+  value       = azurerm_app_service.app.name
 }
