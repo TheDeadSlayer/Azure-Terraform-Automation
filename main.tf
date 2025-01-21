@@ -2,10 +2,13 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.0"
+      version = "~> 4.0"
+    }
+    azuredevops = {
+      source  = "microsoft/azuredevops"
+      version = "~> 0.4"
     }
   }
-  required_version = ">= 1.0.0"
 }
 
 provider "azurerm" {
@@ -85,6 +88,24 @@ resource "azurerm_container_registry" "acr" {
   location            = azurerm_resource_group.rg.location
   sku                 = "Basic"
   admin_enabled       = true
+}
+# Azure DevOps project
+data "azuredevops_project" "existing" {
+  name = var.azdo_project_name
+}
+
+# Docker registry service endpoint
+resource "azuredevops_serviceendpoint_dockerregistry" "acr_connection" {
+  project_id            = data.azuredevops_project.existing.id
+  service_endpoint_name = "MyACRServiceConnection"
+
+  docker_registry = azurerm_container_registry.acr.login_server
+  docker_username = azurerm_container_registry.acr.admin_username
+  docker_password = azurerm_container_registry.acr.admin_password
+
+  authorization {
+    scheme = "auto"
+  }
 }
 
 #################################
