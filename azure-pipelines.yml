@@ -7,7 +7,7 @@ steps:
 - task: AzureCLI@2
   displayName: 'Run Terraform to Generate tf-outputs.json'
   inputs:
-    azureSubscription: 'MyAzureServiceConnection'
+    azureSubscription: 'MyAzureServiceConnection'  # Using the Azure service connection for authentication
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -47,42 +47,63 @@ steps:
     pname: $(pname)
     sub_id: $(sub_id)
 
-- script: |
-    # Ensure jq is installed for parsing JSON outputs
-    sudo apt-get update && sudo apt-get install -y jq
-
-    # Verify the tf-outputs.json file exists
-    if [ ! -f tf-outputs.json ]; then
-      echo "Error: tf-outputs.json file not found!"
-      exit 1
-    fi
-
-    # Parse Terraform outputs
-    export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
-    export DB_USER=$(jq -r '.db_user.value' tf-outputs.json)
-    export DB_PASSWORD=$(jq -r '.db_password.value' tf-outputs.json)
-    export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
-    export BACKEND_APP_NAME=$(jq -r '.backend_app_name.value' tf-outputs.json)
-    export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
-    export RESOURCE_GROUP_NAME=$(jq -r '.resource_group_name.value' tf-outputs.json)
-
-    # Configure backend app environment variables
-    echo "Setting environment variables for the backend app..."
-    az webapp config appsettings set \
-      --resource-group $RESOURCE_GROUP_NAME \
-      --name $BACKEND_APP_NAME \
-      --settings \
-        DB_HOST=$DB_HOST \
-        DB_PORT=5432 \
-        DB_USER=$DB_USER \
-        DB_PASSWORD=$DB_PASSWORD \
-        DB_NAME=$DB_NAME
-
-    # Configure frontend app environment variables
-    echo "Setting environment variables for the frontend app..."
-    az webapp config appsettings set \
-      --resource-group $RESOURCE_GROUP_NAME \
-      --name $FRONTEND_APP_NAME \
-      --settings \
-        REACT_APP_API_URL=https://${BACKEND_APP_NAME}.azurewebsites.net/api
+- task: AzureCLI@2
   displayName: 'Set Environment Variables for Web Apps'
+  inputs:
+    azureSubscription: 'MyAzureServiceConnection'  # Using the Azure service connection for authentication
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Ensure jq is installed for parsing JSON outputs
+      sudo apt-get update && sudo apt-get install -y jq
+
+      # Verify the tf-outputs.json file exists
+      if [ ! -f tf-outputs.json ]; then
+        echo "Error: tf-outputs.json file not found!"
+        exit 1
+      fi
+
+      # Display the contents of tf-outputs.json
+      echo "Contents of tf-outputs.json:"
+      cat tf-outputs.json
+
+      # Parse Terraform outputs
+      export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
+      export DB_USER=$(jq -r '.db_user.value' tf-outputs.json)
+      export DB_PASSWORD=$(jq -r '.db_password.value' tf-outputs.json)
+      export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
+      export BACKEND_APP_NAME=$(jq -r '.backend_app_name.value' tf-outputs.json)
+      export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
+      export RESOURCE_GROUP_NAME=$(jq -r '.resource_group_name.value' tf-outputs.json)
+
+      # Validate required variables
+      if [ -z "$RESOURCE_GROUP_NAME" ] || [ -z "$BACKEND_APP_NAME" ] || [ -z "$FRONTEND_APP_NAME" ]; then
+        echo "Error: One or more required variables are empty."
+        exit 1
+      fi
+
+      # Configure backend app environment variables
+      echo "Setting environment variables for the backend app..."
+      az webapp config appsettings set \
+        --resource-group $RESOURCE_GROUP_NAME \
+        --name $BACKEND_APP_NAME \
+        --settings \
+          DB_HOST=$DB_HOST \
+          DB_PORT=5432 \
+          DB_USER=$DB_USER \
+          DB_PASSWORD=$DB_PASSWORD \
+          DB_NAME=$DB_NAME || {
+            echo "Failed to set backend environment variables."
+            exit 1
+          }
+
+      # Configure frontend app environment variables
+      echo "Setting environment variables for the frontend app..."
+      az webapp config appsettings set \
+        --resource-group $RESOURCE_GROUP_NAME \
+        --name $FRONTEND_APP_NAME \
+        --settings \
+          REACT_APP_API_URL=https://${BACKEND_APP_NAME}.azurewebsites.net/api || {
+            echo "Failed to set frontend environment variables."
+            exit 1
+          }
