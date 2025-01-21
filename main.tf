@@ -32,6 +32,8 @@ resource "azurerm_postgresql_flexible_server" "db" {
   version             = "14"
   sku_name            = "B_Standard_B1ms" # Or "Standard_B1ms" if needed
   storage_mb          = 32768
+ # Ensure public access is enabled
+  public_network_access_enabled = true
 }
 
 # The actual "employeesdb" (or whatever db_name) on that server
