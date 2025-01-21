@@ -186,8 +186,20 @@ resource "azurerm_service_plan" "asp_frontend" {
 #}
 
 resource "azurerm_app_service" "frontend_app" {
-  name                = "${var.frontend_app_name}
+  name                = "${var.frontend_app_name}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   app_service_plan_id = azurerm_service_plan.asp_frontend.id
+
+  # If you plan to serve a Node-based React app (SSR) or otherwise.
+  # If purely static, you can simply deploy build/ files as static content.
+  site_config {
+    # For a Node-based environment, for example:
+    linux_fx_version = "NODE|18-lts"
+  }
+
+  # Example environment variables for the frontend
+  app_settings = {
+    REACT_APP_API_URL = "https://${azurerm_app_service.app.default_site_hostname}/api"
+  }
 }
