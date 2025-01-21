@@ -1,6 +1,6 @@
 variable "location" {
   type    = string
-  default = "canadaeast"
+  default = "canadacentral"
 }
 
 variable "resource_group_name" {
