@@ -34,8 +34,7 @@ resource "azurerm_postgresql_flexible_server" "db" {
 # Database for employees
 resource "azurerm_postgresql_flexible_server_database" "employees" {
   name                = var.db_name
-  resource_group_name = azurerm_resource_group.rg.name
-  server_name         = azurerm_postgresql_flexible_server.db.name
+  server_id = azurerm_postgresql_flexible_server.db.id
   collation           = "en_US.utf8"
   charset             = "UTF8"
 }
