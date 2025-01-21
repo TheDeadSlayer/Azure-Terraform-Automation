@@ -19,3 +19,8 @@ output "db_password" {
 output "db_name" {
   value = var.db_name
 }
+
+output "backend_app_url" {
+  description = "The URL of the backend app"
+  value       = "https://${azurerm_app_service.app.default_site_hostname}/api"
+}
