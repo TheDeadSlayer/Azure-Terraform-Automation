@@ -1,0 +1,59 @@
+# azure-pipelines-infra.yml
+# A pipeline to (a) run Terraform, (b) capture Terraform outputs, 
+# and (c) set them as pipeline variables for subsequent usage.
+
+trigger: none  # We'll run this manually or via another mechanism
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: AzureCLI@2
+  displayName: 'Install Terraform & Run "terraform init/plan/apply"'
+  inputs:
+    # 1) "azureSubscription" references your Azure DevOps Service Connection 
+    #    that authenticates to Azure. See explanation below.
+    azureSubscription: 'MyAzureServiceConnection'  # <--- YOUR SERVICE CONNECTION NAME HERE
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # (Optional) Install or update Terraform
+      curl -sSL https://aka.ms/InstallAzureCLIDeb | sudo bash
+      sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
+      curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+      sudo apt-add-repository "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+      sudo apt-get update && sudo apt-get install terraform -y
+
+      # 2) Move to your Terraform folder
+      cd infra
+
+      # 3) Run Terraform commands
+      terraform init
+      terraform plan -out=tfplan -var="db_admin_password=$(DB_ADMIN_PASSWORD)"
+      # "db_admin_password" is presumably stored as a pipeline secret variable 
+      # in Azure DevOps for your Terraform to create the DB.
+      terraform apply -auto-approve tfplan
+
+      # 4) Export outputs to a JSON file for downstream steps
+      terraform output -json > ../tf-outputs.json
+  env:
+    # This references a secret variable in your Azure DevOps pipeline 
+    # or variable group named DB_ADMIN_PASSWORD.
+    DB_ADMIN_PASSWORD: $(DB_ADMIN_PASSWORD)
+
+- script: |
+    # 5) Parse tf-outputs.json using jq & set pipeline variables
+    sudo apt-get update && sudo apt-get install -y jq
+
+    export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
+    echo "##vso[task.setvariable variable=DB_HOST]$DB_HOST"
+
+    export DB_USER=$(jq -r '.db_user.value' tf-outputs.json)
+    echo "##vso[task.setvariable variable=DB_USER]$DB_USER"
+
+    export DB_PASSWORD=$(jq -r '.db_password.value' tf-outputs.json)
+    echo "##vso[task.setvariable variable=DB_PASSWORD]$DB_PASSWORD"
+
+    export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
+    echo "##vso[task.setvariable variable=DB_NAME]$DB_NAME"
+  displayName: 'Extract Terraform Outputs & Set Pipeline Variables'
