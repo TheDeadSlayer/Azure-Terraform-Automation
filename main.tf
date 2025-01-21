@@ -103,14 +103,21 @@ data "azuredevops_project" "existing" {
 resource "azuredevops_serviceendpoint_dockerregistry" "acr_connection" {
   project_id            = data.azuredevops_project.existing.id
   service_endpoint_name = "MyACRServiceConnection"
+  description           = "ACR Docker registry"
 
   docker_registry = azurerm_container_registry.acr.login_server
   docker_username = azurerm_container_registry.acr.admin_username
   docker_password = azurerm_container_registry.acr.admin_password
 
-  authorization {
-    scheme = "auto"
-  }
+  # For Docker Hub or other registry, you could set:
+  #   registry_type = "DockerHub"
+  # etc.
+}
+
+resource "azuredevops_resource_authorization" "acr_connection_auth" {
+  project_id   = data.azuredevops_project.existing.id
+  resource_id  = azuredevops_serviceendpoint_dockerregistry.acr_connection.id
+  resource_type = "endpoint"
 }
 
 #################################
