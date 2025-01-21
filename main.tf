@@ -115,11 +115,10 @@ resource "azuredevops_serviceendpoint_dockerregistry" "acr_connection" {
 }
 
 resource "azuredevops_resource_authorization" "acr_connection_auth" {
-  project_id   = data.azuredevops_project.existing.id
-  resource_id  = azuredevops_serviceendpoint_dockerregistry.acr_connection.id
-  resource_type = "endpoint"
+  project_id  = data.azuredevops_project.existing.id
+  resource_id = azuredevops_serviceendpoint_dockerregistry.acr_connection.id
+  authorized  = true
 }
-
 #################################
 # 4) App Service Plan (Use azurerm_service_plan, not azurerm_app_service_plan)
 #################################
