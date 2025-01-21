@@ -198,7 +198,10 @@ resource "azurerm_app_service" "frontend_app" {
     linux_fx_version = "NODE|18-lts"
   }
 
-  # Example environment variables for the frontend
+  site_config {
+    linux_fx_version = "NODE|18-lts"
+  }
+
   app_settings = {
     REACT_APP_API_URL = "https://${azurerm_app_service.app.default_site_hostname}/api"
   }
