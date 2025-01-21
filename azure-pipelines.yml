@@ -29,7 +29,7 @@ steps:
 
       # 3) Run Terraform commands
       terraform init
-      terraform plan -out=tfplan -var="db_admin_password=$(DB_ADMIN_PASSWORD)"
+      terraform plan -out=tfplan -var="db_admin_password=$(DB_ADMIN_PASSWORD)" -var="pname=$(pname)" -var="org_url=$(url)" -var="pat=$(pat)"
       # "db_admin_password" is presumably stored as a pipeline secret variable 
       # in Azure DevOps for your Terraform to create the DB.
       terraform apply -auto-approve tfplan
@@ -40,6 +40,9 @@ steps:
     # This references a secret variable in your Azure DevOps pipeline 
     # or variable group named DB_ADMIN_PASSWORD.
     DB_ADMIN_PASSWORD: $(DB_ADMIN_PASSWORD)
+    url: $(url) 
+    pat: $(pat)
+    pname: $(pname) 
 
 - script: |
     # 5) Parse tf-outputs.json using jq & set pipeline variables
