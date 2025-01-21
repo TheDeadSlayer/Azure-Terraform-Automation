@@ -46,46 +46,41 @@ steps:
     sub_id: $(sub_id)
 
 - script: |
-    # Install jq for parsing JSON outputs
+    # Ensure jq is installed for parsing JSON outputs
     sudo apt-get update && sudo apt-get install -y jq
 
-    # Ensure the tf-outputs.json exists
+    # Verify the tf-outputs.json file exists
     if [ ! -f tf-outputs.json ]; then
       echo "Error: tf-outputs.json file not found!"
       exit 1
     fi
 
-    # Parse Terraform outputs and set them as variables
+    # Parse Terraform outputs
     export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_HOST]$DB_HOST"
-
     export DB_USER=$(jq -r '.db_user.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_USER]$DB_USER"
-
     export DB_PASSWORD=$(jq -r '.db_password.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_PASSWORD]$DB_PASSWORD"
-
     export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_NAME]$DB_NAME"
-
-    export BACKEND_API_URL=$(jq -r '.backend_app_url.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=BACKEND_API_URL]$BACKEND_API_URL"
-
     export BACKEND_APP_NAME=$(jq -r '.backend_app_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=BACKEND_APP_NAME]$BACKEND_APP_NAME"
-
     export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=FRONTEND_APP_NAME]$FRONTEND_APP_NAME"
+    export RESOURCE_GROUP_NAME=$(jq -r '.resource_group_name.value' tf-outputs.json)
 
     # Configure backend app environment variables
-    az webapp config appsettings set --resource-group $(pname) --name $BACKEND_APP_NAME --settings \
-      DB_HOST=$DB_HOST \
-      DB_PORT=5432 \
-      DB_USER=$DB_USER \
-      DB_PASSWORD=$DB_PASSWORD \
-      DB_NAME=$DB_NAME
+    echo "Setting environment variables for the backend app..."
+    az webapp config appsettings set \
+      --resource-group $RESOURCE_GROUP_NAME \
+      --name $BACKEND_APP_NAME \
+      --settings \
+        DB_HOST=$DB_HOST \
+        DB_PORT=5432 \
+        DB_USER=$DB_USER \
+        DB_PASSWORD=$DB_PASSWORD \
+        DB_NAME=$DB_NAME
 
     # Configure frontend app environment variables
-    az webapp config appsettings set --resource-group $(pname) --name $FRONTEND_APP_NAME --settings \
-      REACT_APP_API_URL=$BACKEND_API_URL
+    echo "Setting environment variables for the frontend app..."
+    az webapp config appsettings set \
+      --resource-group $RESOURCE_GROUP_NAME \
+      --name $FRONTEND_APP_NAME \
+      --settings \
+        REACT_APP_API_URL=https://${BACKEND_APP_NAME}.azurewebsites.net/api
   displayName: 'Set Environment Variables for Web Apps'
