@@ -38,6 +38,8 @@ steps:
       else
         echo "tf-outputs.json created successfully."
       fi
+      cat tf-outputs.json
+
   env:
     DB_ADMIN_PASSWORD: $(DB_ADMIN_PASSWORD)
     url: $(url)
