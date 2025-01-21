@@ -62,4 +62,4 @@ variable "azure_subscription_id" {
     type    = string
     default = "id"
 }
-}
+
