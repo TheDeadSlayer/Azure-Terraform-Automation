@@ -138,17 +138,17 @@ resource "azurerm_service_plan" "asp" {
 #################################
 # Random suffix for a globally-unique App Service name
 #################################
-resource "random_string" "suffix" {
-  length  = 6
-  special = false
-}
+#resource "random_string" "suffix" {
+ # length  = 6
+ # special = false
+#}
 
 #################################
 # Azure App Service (Container)
 #################################
 resource "azurerm_app_service" "app" {
   # Must be globally unique
-  name                = "${var.app_name}-${random_string.suffix.result}"
+  name                = "${var.app_name}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   app_service_plan_id     = azurerm_service_plan.asp.id
@@ -165,5 +165,41 @@ resource "azurerm_app_service" "app" {
     DB_PASSWORD   = var.db_admin_password
     DB_NAME       = var.db_name
     WEBSITES_PORT = "4000"
+  }
+}
+
+#################################
+# 5) App Service Plan & Resource for the FRONTEND
+#################################
+# A separate plan for the React app (or you can reuse the same plan if desired)
+resource "azurerm_service_plan" "asp_frontend" {
+  name                = "${var.fe_app_name}-plan"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  os_type             = "Linux"
+  sku_name            = "B1"
+}
+
+# resource "random_string" "suffix_frontend" {
+ # length  = 6
+ # special = false
+#}
+
+resource "azurerm_app_service" "frontend_app" {
+  name                = "${var.frontend_app_name}
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  app_service_plan_id = azurerm_service_plan.asp_frontend.id
+
+  # If you plan to serve a Node-based React app (SSR) or otherwise.
+  # If purely static, you can simply deploy build/ files as static content.
+  site_config {
+    # For a Node-based environment, for example:
+    linux_fx_version = "NODE|18-lts"
+  }
+
+  # Example environment variables for the frontend
+  app_settings = {
+    REACT_APP_API_URL = "https://${azurerm_app_service.app.default_site_hostname}/api"
   }
 }

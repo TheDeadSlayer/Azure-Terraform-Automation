@@ -34,7 +34,12 @@ variable "acr_name" {
 
 variable "app_name" {
   type    = string
-  default = "myAppService"
+  default = "NodeJs-Backend-12"
+}
+
+variable "fe_app_name" {
+  type    = string
+  default = "ReactJs-Frontend-12"
 }
 
 variable "image_name" {
