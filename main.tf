@@ -167,7 +167,7 @@ resource "azurerm_app_service" "app" {
   # }
 
   site_config {
-    linux_fx_version = "DOCKER|${file("server/Dockerfile")}"  # Reference Dockerfile
+    linux_fx_version = "DOCKER|appsvc/node:18-lts" # Generic runtime
   }
 
   # Pass DB connection info as environment variables
@@ -179,6 +179,12 @@ resource "azurerm_app_service" "app" {
     DB_NAME       = var.db_name
     WEBSITES_PORT = "80"
   }
+}
+
+resource "azurerm_role_assignment" "db_access" {
+  principal_id         = azurerm_app_service.app.identity[0].principal_id
+  role_definition_name = "Contributor"
+  scope                = azurerm_postgresql_flexible_server.db.id
 }
 
 
