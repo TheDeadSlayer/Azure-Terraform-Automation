@@ -74,7 +74,7 @@ steps:
       export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
       export BACKEND_APP_NAME=$(jq -r '.backend_app_name.value' tf-outputs.json)
       export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
-      export RESOURCE_GROUP_NAME=$(jq -r '.resource_group_name.value' tf-outputs.json)
+      export RESOURCE_GROUP_NAME=$(jq -r '.rg_name.value' tf-outputs.json)
 
       # Validate required variables
       if [ -z "$RESOURCE_GROUP_NAME" ] || [ -z "$BACKEND_APP_NAME" ] || [ -z "$FRONTEND_APP_NAME" ]; then
