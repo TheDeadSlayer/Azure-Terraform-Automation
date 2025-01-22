@@ -27,10 +27,10 @@ variable "db_name" {
   default = "employeesdb"
 }
 
-variable "acr_name" {
-  type    = string
-  default = "myappacr123"
-}
+# variable "acr_name" {
+#   type    = string
+#   default = "myappacr123"
+# }
 
 variable "app_name" {
   type    = string
@@ -42,10 +42,10 @@ variable "fe_app_name" {
   default = "ReactJs-Frontend-12"
 }
 
-variable "image_name" {
-  type    = string
-  default = "my-backend-image"
-}
+# variable "image_name" {
+#   type    = string
+#   default = "my-backend-image"
+# }
 
 variable "org_url" {
   type    = string
