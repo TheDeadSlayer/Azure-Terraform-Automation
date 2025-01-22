@@ -21,14 +21,6 @@ provider "azuredevops" {
   personal_access_token = var.pat
 }
 
-#################################
-# Role Assignment for Terraform Service Principal
-#################################
-resource "azurerm_role_assignment" "terraform_service_principal_role" {
-  scope                = "/subscriptions/${var.azure_subscription_id}"
-  principal_id         = var.terraform_service_principal_id
-  role_definition_name = "User Access Administrator"
-}
 
 #################################
 # 1) Resource Group
