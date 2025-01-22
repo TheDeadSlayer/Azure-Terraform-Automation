@@ -1,5 +1,5 @@
 output "rg_name" {
-  description = "Database host"
+  description = "Resource Group"
   value       = "${var.resource_group_name}"
 }
 
