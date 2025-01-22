@@ -162,9 +162,9 @@ resource "azurerm_app_service" "app" {
   location            = azurerm_resource_group.rg.location
   app_service_plan_id     = azurerm_service_plan.asp.id
 
-  #   identity {
-  #   type = "SystemAssigned"
-  # }
+    identity {
+    type = "SystemAssigned"
+  }
 
   site_config {
     linux_fx_version = "DOCKER|appsvc/node:18-lts" # Generic runtime
@@ -185,6 +185,11 @@ resource "azurerm_role_assignment" "db_access" {
   principal_id         = azurerm_app_service.app.identity[0].principal_id
   role_definition_name = "Contributor"
   scope                = azurerm_postgresql_flexible_server.db.id
+
+    depends_on = [
+    azurerm_app_service.app,  # Explicit dependency
+    azurerm_postgresql_flexible_server.db
+  ]
 }
 
 
