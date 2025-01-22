@@ -1,3 +1,8 @@
+output "rg_name" {
+  description = "Database host"
+  value       = "${var.resource_group_name}"
+}
+
 output "db_host" {
   description = "Database host"
   value       = azurerm_postgresql_flexible_server.db.fqdn
