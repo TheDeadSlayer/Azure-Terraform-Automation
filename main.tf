@@ -168,6 +168,7 @@ resource "azurerm_app_service" "app" {
 
   site_config {
     linux_fx_version = "DOCKER|appsvc/node:18-lts" # Generic runtime
+    always_on        = "true"
   }
 
   # Pass DB connection info as environment variables
