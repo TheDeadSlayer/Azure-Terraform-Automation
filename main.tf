@@ -22,6 +22,15 @@ provider "azuredevops" {
 }
 
 #################################
+# Role Assignment for Terraform Service Principal
+#################################
+resource "azurerm_role_assignment" "terraform_service_principal_role" {
+  scope                = "/subscriptions/${var.azure_subscription_id}"
+  principal_id         = var.terraform_service_principal_id
+  role_definition_name = "User Access Administrator"
+}
+
+#################################
 # 1) Resource Group
 #################################
 resource "azurerm_resource_group" "rg" {
@@ -121,11 +130,7 @@ resource "azuredevops_resource_authorization" "acr_connection_auth" {
   authorized  = true
 }
 
-resource "azurerm_role_assignment" "acr_pull" {
-  principal_id         = azurerm_app_service.app.identity[0].principal_id
-  role_definition_name = "AcrPull"
-  scope                = azurerm_container_registry.acr.id
-}
+
 
 #################################
 # 4) App Service Plan (Use azurerm_service_plan, not azurerm_app_service_plan)
@@ -177,6 +182,12 @@ resource "azurerm_app_service" "app" {
     DB_NAME       = var.db_name
     WEBSITES_PORT = "80"
   }
+}
+
+resource "azurerm_role_assignment" "acr_pull" {
+  principal_id         = azurerm_app_service.app.identity[0].principal_id
+  role_definition_name = "AcrPull"
+  scope                = azurerm_container_registry.acr.id
 }
 
 #################################
