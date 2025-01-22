@@ -120,6 +120,13 @@ resource "azuredevops_resource_authorization" "acr_connection_auth" {
   resource_id = azuredevops_serviceendpoint_dockerregistry.acr_connection.id
   authorized  = true
 }
+
+resource "azurerm_role_assignment" "acr_pull" {
+  principal_id         = azurerm_app_service.app.identity[0].principal_id
+  role_definition_name = "AcrPull"
+  scope                = azurerm_container_registry.acr.id
+}
+
 #################################
 # 4) App Service Plan (Use azurerm_service_plan, not azurerm_app_service_plan)
 #################################
@@ -153,6 +160,10 @@ resource "azurerm_app_service" "app" {
   location            = azurerm_resource_group.rg.location
   app_service_plan_id     = azurerm_service_plan.asp.id
 
+    identity {
+    type = "SystemAssigned"
+  }
+
   site_config {
     linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/${var.image_name}:latest"
   }
@@ -164,7 +175,7 @@ resource "azurerm_app_service" "app" {
     DB_USER       = "${var.db_admin_username}@${var.db_server_name}"
     DB_PASSWORD   = var.db_admin_password
     DB_NAME       = var.db_name
-    WEBSITES_PORT = "4000"
+    WEBSITES_PORT = "80"
   }
 }
 
