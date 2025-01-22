@@ -5,6 +5,24 @@ pool:
 
 steps:
 - task: AzureCLI@2
+  displayName: 'Grant Required Permissions'
+  inputs:
+    azureSubscription: 'MyAzureServiceConnection'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Get Service Principal ID from Azure context
+      SP_ID=$(az ad signed-in-user show --query id -o tsv)
+      SUB_ID=$(az account show --query id -o tsv)
+
+      # Assign Owner role at resource group level (narrower scope)
+      az role assignment create \
+        --assignee "$SP_ID" \
+        --role "Owner" \
+        --scope "/subscriptions/$SUB_ID/resourceGroups/$(RESOURCE_GROUP_NAME)"
+  env:
+    RESOURCE_GROUP_NAME: $(rgName) # Define this variable in DevOps
+- task: AzureCLI@2
   displayName: 'Run Terraform to Generate tf-outputs.json'
   inputs:
     azureSubscription: 'MyAzureServiceConnection'  # Using the Azure service connection for authentication
