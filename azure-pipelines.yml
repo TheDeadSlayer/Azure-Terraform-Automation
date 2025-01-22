@@ -1,4 +1,3 @@
-# azure-pipelines-infra.yml
 trigger: none
 
 pool:
@@ -6,20 +5,20 @@ pool:
 
 steps:
 - task: AzureCLI@2
-  displayName: 'Install Terraform & Run "terraform init/plan/apply"'
+  displayName: 'Run Terraform to Generate tf-outputs.json'
   inputs:
-    azureSubscription: 'MyAzureServiceConnection'
+    azureSubscription: 'MyAzureServiceConnection'  # Using the Azure service connection for authentication
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
-      # Install or update Terraform
+      # Install Terraform (if not already installed)
       curl -sSL https://aka.ms/InstallAzureCLIDeb | sudo bash
       sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
       curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
       sudo apt-add-repository "deb https://apt.releases.hashicorp.com $(lsb_release -cs) main"
       sudo apt-get update && sudo apt-get install terraform -y
 
-      # Run Terraform commands
+      # Initialize and apply Terraform
       terraform init
       terraform plan -out=tfplan \
         -var="db_admin_password=$(DB_ADMIN_PASSWORD)" \
@@ -29,62 +28,82 @@ steps:
         -var="azure_subscription_id=$(sub_id)"
       terraform apply -auto-approve tfplan
 
-      # Export Terraform outputs to a JSON file
-      terraform output -json > ../tf-outputs.json
+      # Generate tf-outputs.json
+      terraform output -json > tf-outputs.json
+
+      # Confirm the file exists
+      if [ ! -f tf-outputs.json ]; then
+        echo "Error: tf-outputs.json was not created."
+        exit 1
+      else
+        echo "tf-outputs.json created successfully."
+      fi
+      cat tf-outputs.json
+
   env:
     DB_ADMIN_PASSWORD: $(DB_ADMIN_PASSWORD)
-    url: $(url) 
+    url: $(url)
     pat: $(pat)
-    pname: $(pname) 
+    pname: $(pname)
     sub_id: $(sub_id)
 
-- script: |
-    # Install jq for parsing JSON outputs
-    sudo apt-get update && sudo apt-get install -y jq
-
-    # Parse Terraform outputs and set them as pipeline variables
-    export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_HOST]$DB_HOST"
-
-    export DB_USER=$(jq -r '.db_user.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_USER]$DB_USER"
-
-    export DB_PASSWORD=$(jq -r '.db_password.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_PASSWORD]$DB_PASSWORD"
-
-    export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=DB_NAME]$DB_NAME"
-
-    # Capture backend API URL and frontend app name
-    export BACKEND_API_URL=$(jq -r '.backend_app_url.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=BACKEND_API_URL]$BACKEND_API_URL"
-
-    export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=FRONTEND_APP_NAME]$FRONTEND_APP_NAME"
-
-    # Export backend app name
-    export BACKEND_APP_NAME=$(jq -r '.backend_app_name.value' tf-outputs.json)
-    echo "##vso[task.setvariable variable=BACKEND_APP_NAME]$BACKEND_APP_NAME"
-  displayName: 'Extract Terraform Outputs & Set Pipeline Variables'
-
-- task: AzureWebApp@1
-  displayName: 'Configure Backend App Environment Variables'
+- task: AzureCLI@2
+  displayName: 'Set Environment Variables for Web Apps'
   inputs:
-    azureSubscription: 'MyAzureServiceConnection'
-    appName: $(BACKEND_APP_NAME)
-    appType: webApp  # Specifies the type of app
-    appSettings: |
-      DB_HOST=$(DB_HOST)
-      DB_PORT=5432
-      DB_USER=$(DB_USER)
-      DB_PASSWORD=$(DB_PASSWORD)
-      DB_NAME=$(DB_NAME)
+    azureSubscription: 'MyAzureServiceConnection'  # Using the Azure service connection for authentication
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Ensure jq is installed for parsing JSON outputs
+      sudo apt-get update && sudo apt-get install -y jq
 
-- task: AzureWebApp@1
-  displayName: 'Configure Frontend App Environment Variables'
-  inputs:
-    azureSubscription: 'MyAzureServiceConnection'
-    appName: $(FRONTEND_APP_NAME)
-    appType: webApp  # Specifies the type of app
-    appSettings: |
-      REACT_APP_API_URL=$(BACKEND_API_URL)
+      # Verify the tf-outputs.json file exists
+      if [ ! -f tf-outputs.json ]; then
+        echo "Error: tf-outputs.json file not found!"
+        exit 1
+      fi
+
+      # Display the contents of tf-outputs.json
+      echo "Contents of tf-outputs.json:"
+      cat tf-outputs.json
+
+      # Parse Terraform outputs
+      export DB_HOST=$(jq -r '.db_host.value' tf-outputs.json)
+      export DB_USER=$(jq -r '.db_user.value' tf-outputs.json)
+      export DB_PASSWORD=$(jq -r '.db_password.value' tf-outputs.json)
+      export DB_NAME=$(jq -r '.db_name.value' tf-outputs.json)
+      export BACKEND_APP_NAME=$(jq -r '.backend_app_name.value' tf-outputs.json)
+      export FRONTEND_APP_NAME=$(jq -r '.frontend_app_name.value' tf-outputs.json)
+      export RESOURCE_GROUP_NAME=$(jq -r '.resource_group_name.value' tf-outputs.json)
+
+      # Validate required variables
+      if [ -z "$RESOURCE_GROUP_NAME" ] || [ -z "$BACKEND_APP_NAME" ] || [ -z "$FRONTEND_APP_NAME" ]; then
+        echo "Error: One or more required variables are empty."
+        exit 1
+      fi
+
+      # Configure backend app environment variables
+      echo "Setting environment variables for the backend app..."
+      az webapp config appsettings set \
+        --resource-group $RESOURCE_GROUP_NAME \
+        --name $BACKEND_APP_NAME \
+        --settings \
+          DB_HOST=$DB_HOST \
+          DB_PORT=5432 \
+          DB_USER=$DB_USER \
+          DB_PASSWORD=$DB_PASSWORD \
+          DB_NAME=$DB_NAME || {
+            echo "Failed to set backend environment variables."
+            exit 1
+          }
+
+      # Configure frontend app environment variables
+      echo "Setting environment variables for the frontend app..."
+      az webapp config appsettings set \
+        --resource-group $RESOURCE_GROUP_NAME \
+        --name $FRONTEND_APP_NAME \
+        --settings \
+          REACT_APP_API_URL=https://${BACKEND_APP_NAME}.azurewebsites.net/api || {
+            echo "Failed to set frontend environment variables."
+            exit 1
+          }
