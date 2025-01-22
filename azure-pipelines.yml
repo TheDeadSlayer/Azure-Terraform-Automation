@@ -4,6 +4,22 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
+# New step: Elevate permissions first
+- task: AzureCLI@2
+  displayName: 'Grant Required Permissions'
+  inputs:
+    azureSubscription: 'MyAzureServiceConnection'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Get current service principal ID
+      SP_ID=$(az ad sp show --id $(servicePrincipalId) --query id -o tsv)
+      
+      # Assign Owner role at subscription level
+      az role assignment create \
+        --assignee "$SP_ID" \
+        --role "Owner" \
+        --scope "/subscriptions/$(az account show --query id -o tsv)"
 - task: AzureCLI@2
   displayName: 'Run Terraform to Generate tf-outputs.json'
   inputs:
