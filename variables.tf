@@ -70,4 +70,5 @@ variable "azure_subscription_id" {
 
 variable "terraform_service_principal_id" {
   description = "The Object ID of the Service Principal running Terraform"
+  default = "terrform-admin12"
 }
