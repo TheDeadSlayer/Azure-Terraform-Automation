@@ -42,3 +42,8 @@ output "acr_login_server"{
   description = "ACR Login Server"
   value =  azurerm_container_registry.acr.login_server
 }
+
+output "acr_password" {
+  value       = azurerm_container_registry.acr.admin_password
+  description = "The admin password for the Azure Container Registry"
+}
