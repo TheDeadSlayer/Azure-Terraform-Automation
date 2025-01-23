@@ -162,10 +162,10 @@ resource "azurerm_app_service" "app" {
     type = "SystemAssigned"
   }
 
-  # site_config {
-  #   linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/${var.image_name}:latest"
-  #   always_on        = "true"
-  # }
+  site_config {
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/${var.image_name}:latest"
+    always_on        = "true"
+  }
 
   # Pass DB connection info as environment variables
   app_settings = {

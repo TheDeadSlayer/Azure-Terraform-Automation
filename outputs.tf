@@ -37,3 +37,8 @@ output "backend_app_name" {
   description = "Backend app name"
   value       = azurerm_app_service.app.name
 }
+
+output "acr_login_server"{
+  description = "ACR Login Server"
+  value =  azurerm_container_registry.acr.login_server
+}
