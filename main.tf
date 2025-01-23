@@ -86,47 +86,43 @@ resource "null_resource" "init_employees_table" {
   }
 }
 
-# #################################
-# # 3) Azure Container Registry (optional)
-# #################################
-# resource "azurerm_container_registry" "acr" {
-#   name                = var.acr_name
-#   resource_group_name = azurerm_resource_group.rg.name
-#   location            = azurerm_resource_group.rg.location
-#   sku                 = "Basic"
-#   admin_enabled       = true
-# }
-# # Azure DevOps project
-# data "azuredevops_project" "existing" {
-#   name = var.pname
-# }
+#################################
+# 3) Azure Container Registry (optional)
+#################################
+resource "azurerm_container_registry" "acr" {
+  name                = var.acr_name
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku                 = "Basic"
+  admin_enabled       = true
+}
+# Azure DevOps project
+data "azuredevops_project" "existing" {
+  name = var.pname
+}
 
-# # Docker registry service endpoint
-# resource "azuredevops_serviceendpoint_dockerregistry" "acr_connection" {
-#   project_id            = data.azuredevops_project.existing.id
-#   service_endpoint_name = "MyACRServiceConnection"
-#   description           = "ACR Docker registry"
+# Docker registry service endpoint
+resource "azuredevops_serviceendpoint_dockerregistry" "acr_connection" {
+  project_id            = data.azuredevops_project.existing.id
+  service_endpoint_name = "MyACRServiceConnection"
+  description           = "ACR Docker registry"
 
-#   docker_registry = azurerm_container_registry.acr.login_server
-#   docker_username = azurerm_container_registry.acr.admin_username
-#   docker_password = azurerm_container_registry.acr.admin_password
+  docker_registry = azurerm_container_registry.acr.login_server
+  docker_username = azurerm_container_registry.acr.admin_username
+  docker_password = azurerm_container_registry.acr.admin_password
 
-#   # For Docker Hub or other registry, you could set:
-#   #   registry_type = "DockerHub"
-#   # etc.
-# }
+  # For Docker Hub or other registry, you could set:
+  #   registry_type = "DockerHub"
+  # etc.
+}
 
-# resource "azuredevops_resource_authorization" "acr_connection_auth" {
-#   project_id  = data.azuredevops_project.existing.id
-#   resource_id = azuredevops_serviceendpoint_dockerregistry.acr_connection.id
-#   authorized  = true
-# }
+resource "azuredevops_resource_authorization" "acr_connection_auth" {
+  project_id  = data.azuredevops_project.existing.id
+  resource_id = azuredevops_serviceendpoint_dockerregistry.acr_connection.id
+  authorized  = true
+}
 
-# resource "azurerm_role_assignment" "acr_pull" {
-#   principal_id         = azurerm_app_service.app.identity[0].principal_id
-#   role_definition_name = "AcrPull"
-#   scope                = azurerm_container_registry.acr.id
-# }
+
 
 
 #################################
@@ -167,7 +163,7 @@ resource "azurerm_app_service" "app" {
   }
 
   site_config {
-    linux_fx_version = "DOCKER|appsvc/node:18-lts" # Generic runtime
+    linux_fx_version = "DOCKER|${azurerm_container_registry.acr.login_server}/${var.image_name}:latest"
     always_on        = "true"
   }
 
@@ -186,6 +182,17 @@ resource "azurerm_role_assignment" "db_access" {
   principal_id         = azurerm_app_service.app.identity[0].principal_id
   role_definition_name = "Contributor"
   scope                = azurerm_postgresql_flexible_server.db.id
+
+    depends_on = [
+    azurerm_app_service.app,  # Explicit dependency
+    azurerm_postgresql_flexible_server.db
+  ]
+}
+
+resource "azurerm_role_assignment" "acr_pull" {
+  principal_id         = azurerm_app_service.app.identity[0].principal_id
+  role_definition_name = "AcrPull"
+  scope                = azurerm_container_registry.acr.id
 
     depends_on = [
     azurerm_app_service.app,  # Explicit dependency
