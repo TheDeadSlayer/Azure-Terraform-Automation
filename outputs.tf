@@ -10,7 +10,7 @@ output "db_host" {
 
 output "db_user" {
   description = "Database user"
-  value       = "${var.db_admin_username}@${azurerm_postgresql_flexible_server.db.name}"
+  value       = "${var.db_admin_username}"
 }
 
 output "db_password" {
